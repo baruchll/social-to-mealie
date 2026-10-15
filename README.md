@@ -164,6 +164,24 @@ When `API_TOKEN` is set, send it as a header on the import endpoint:
 Authorization: Bearer <API_TOKEN>
 ```
 
+### Multi-household support (optional)
+
+By default every recipe is created in the household of the user who owns `MEALIE_API_KEY`. If your Mealie instance has several households, set `MEALIE_MAP_USERS=true` (requires OIDC login) and each recipe will be created in the household of the person who is logged in.
+
+| Variable                      | Required | Default | Description                                                                          |
+| ----------------------------- | -------- | ------- | ------------------------------------------------------------------------------------ |
+| MEALIE_MAP_USERS              | No       | `false` | Look up the logged-in user in Mealie by email and create recipes in their household  |
+| MEALIE_REQUIRE_VERIFIED_EMAIL | No       | `false` | Also require the OIDC provider to report the email as verified (`email_verified`)    |
+
+How it works:
+
+- At login, the email from your OIDC provider is matched against the users in Mealie. The user's id, household and group are stored in the session. The API key is never exposed to the browser.
+- A recipe is created with `MEALIE_API_KEY` and then reassigned to the user's household, so only one Mealie token is needed.
+- `MEALIE_API_KEY` must belong to a Mealie admin, because the user lookup uses the admin users endpoint.
+- A user whose email does not match any Mealie user cannot sign in and sees an error on the sign-in page.
+- Requests that use `API_TOKEN` have no logged-in user, so their recipes are created in the household of the `MEALIE_API_KEY` owner.
+- Only enable this if users cannot change their own email address at your OIDC provider, or set `MEALIE_REQUIRE_VERIFIED_EMAIL=true`. Otherwise someone could claim another person's email.
+
 Only `/api/get-url` accepts the token. Everything else requires an OIDC login.
 
 ## Tested AI providers compatibility
