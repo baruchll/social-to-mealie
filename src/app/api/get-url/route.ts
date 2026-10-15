@@ -3,6 +3,8 @@ import type { progressType, socialMediaResult } from "@/lib/types";
 import { generateRecipeFromAI, getTranscription } from "@/lib/ai";
 import { env } from "@/lib/constants";
 import { downloadMediaWithYtDlp } from "@/lib/yt-dlp";
+import { auth, mapUsersEnabled } from "@/auth";
+import type { MealieSession } from "@/types/next-auth";
 
 interface RequestBody {
     url: string;
@@ -12,7 +14,8 @@ async function handleRequest(
     url: string,
     tags: string[],
     isSse: boolean,
-    controller?: ReadableStreamDefaultController
+    controller?: ReadableStreamDefaultController,
+    owner?: MealieSession
 ) {
     const encoder = new TextEncoder();
     let socialMediaResult: socialMediaResult;
@@ -53,7 +56,7 @@ async function handleRequest(
             progress.audioTranscribed = true;
             if (isSse && controller) {
                 controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({progress})}\n\n`)
+                    encoder.encode(`data: ${JSON.stringify({ progress })}\n\n`)
                 );
             }
         }
@@ -70,8 +73,8 @@ async function handleRequest(
         );
 
         console.log("Posting recipe to Mealie", recipe);
-        const mealieResponse = await postRecipe(recipe);
-        const createdRecipe = await getRecipe(await mealieResponse);
+        const mealieResponse = await postRecipe(recipe, owner);
+        const createdRecipe = await getRecipe(await mealieResponse, owner?.groupSlug);
         console.log("Recipe created");
         progress.recipeCreated = true;
         if (isSse && controller) {
@@ -114,10 +117,14 @@ export async function POST(req: Request) {
     const tags = body.tags;
     const contentType = req.headers.get("Content-Type");
 
+    // Only a browser session carries a household; the API-token path has none.
+    const session = mapUsersEnabled ? await auth() : null;
+    const owner = session?.mealie;
+
     if (contentType === "text/event-stream") {
         const stream = new ReadableStream({
             async start(controller) {
-                await handleRequest(url, tags, true, controller);
+                await handleRequest(url, tags, true, controller, owner);
             },
         });
 
@@ -129,5 +136,5 @@ export async function POST(req: Request) {
             },
         });
     }
-    return handleRequest(url, tags, false);
+    return handleRequest(url, tags, false, undefined, owner);
 }

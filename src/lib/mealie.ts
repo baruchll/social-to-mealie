@@ -1,8 +1,8 @@
 import { env } from "@//lib/constants";
-import emojiStrip from "emoji-strip";
-import type { recipeInfo, recipeResult } from "./types";
+import type { recipeResult } from "./types";
+import type { MealieSession } from "@/types/next-auth";
 
-export async function postRecipe(recipeData: any) {
+export async function postRecipe(recipeData: any, owner?: MealieSession) {
     try {
         const payloadData =
             typeof recipeData === "string"
@@ -32,6 +32,11 @@ export async function postRecipe(recipeData: any) {
         }
         const body = await res.json();
         console.log("Recipe response:", body);
+
+        // Multi-household: hand the new recipe to the logged-in user's household.
+        if (owner) {
+            await moveRecipeToOwner(body, owner);
+        }
         return body;
     } catch (error: any) {
         if (error.name === "AbortError") {
@@ -47,7 +52,31 @@ export async function postRecipe(recipeData: any) {
     }
 }
 
-export async function getRecipe(recipeSlug: string): Promise<recipeResult> {
+async function moveRecipeToOwner(slug: string, owner: MealieSession) {
+    const res = await fetch(`${env.MEALIE_URL}/api/recipes/${slug}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${env.MEALIE_API_KEY}`,
+        },
+        body: JSON.stringify({
+            userId: owner.userId,
+            householdId: owner.householdId,
+        }),
+    });
+    if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Move failed: ${res.status} - ${errorText}`);
+        // Don't leave the recipe sitting in the admin's household.
+        await fetch(`${env.MEALIE_URL}/api/recipes/${slug}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${env.MEALIE_API_KEY}` },
+        }).catch(() => { });
+        throw new Error("Failed to assign recipe to your household");
+    }
+}
+
+export async function getRecipe(recipeSlug: string, groupSlug?: string): Promise<recipeResult> {
     const res = await fetch(`${env.MEALIE_URL}/api/recipes/${recipeSlug}`, {
         method: "GET",
         headers: {
@@ -63,6 +92,6 @@ export async function getRecipe(recipeSlug: string): Promise<recipeResult> {
         name: body.name,
         description: body.description,
         imageUrl: `${env.EXTERNAL_MEALIE_URL || env.MEALIE_URL}/api/media/recipes/${body.id}/images/original.webp`,
-        url: `${env.EXTERNAL_MEALIE_URL || env.MEALIE_URL}/g/${env.MEALIE_GROUP_NAME}/r/${recipeSlug}`,
+        url: `${env.EXTERNAL_MEALIE_URL || env.MEALIE_URL}/g/${groupSlug || env.MEALIE_GROUP_NAME}/r/${recipeSlug}`,
     };
 }
