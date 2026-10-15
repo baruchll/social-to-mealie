@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { auth, authEnabled } from "@/auth";
 
-export const proxy = auth((req) => {
-  if (!authEnabled) return NextResponse.next();
-
+const guard = auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Machine access (iOS Shortcut etc.) to the import endpoint only
@@ -23,6 +22,12 @@ export const proxy = auth((req) => {
   signInUrl.searchParams.set("callbackUrl", req.nextUrl.href);
   return NextResponse.redirect(signInUrl);
 });
+
+export function proxy(req: NextRequest) {
+  // Auth disabled: never touch Auth.js, so no config errors are logged
+  if (!authEnabled) return NextResponse.next();
+  return guard(req, { params: Promise.resolve({}) });
+}
 
 export const config = {
   matcher: [
