@@ -135,6 +135,37 @@ docker run --restart unless-stopped --name social-to-mealie \
 | PORT                      | No       | `4000`                      | Host port to expose the app on                                                                                                               |
 | COOKIES                   | No       | —                           | Cookies string for yt-dlp to access protected content `NAME=VALUE`                                                                           |
 
+## Authentication (optional)
+
+By default the app has no login, so anyone who can reach it can submit recipes to your Mealie. You can protect it with any OpenID Connect provider (Authentik, Keycloak, Google, ...). Authentication is disabled unless `AUTH_OIDC_ISSUER` is set.
+
+| Variable                | Required        | Default | Description                                                                                  |
+| ----------------------- | --------------- | ------- | -------------------------------------------------------------------------------------------- |
+| AUTH_OIDC_ISSUER        | No              | —       | Issuer URL of your OIDC provider. Setting it enables login                                   |
+| AUTH_OIDC_CLIENT_ID     | If auth enabled | —       | OIDC client ID                                                                               |
+| AUTH_OIDC_CLIENT_SECRET | If auth enabled | —       | OIDC client secret                                                                           |
+| AUTH_OIDC_NAME          | No              | `SSO`   | Label shown on the sign-in button                                                            |
+| AUTH_SECRET             | If auth enabled | —       | Random secret used to sign sessions, for example `openssl rand -base64 33`                   |
+| AUTH_URL                | If auth enabled | —       | Public URL of this app, for example `https://recipes.example.com`                            |
+| AUTH_TRUST_HOST         | No              | —       | Set to `true` when running behind a reverse proxy                                            |
+| API_TOKEN               | No              | —       | Static token that lets non-browser clients (the iOS Shortcut) call `/api/get-url` without logging in |
+
+Register this redirect URI at your provider:
+
+```
+<AUTH_URL>/api/auth/callback/oidc
+```
+
+Example with Authentik: create an OAuth2/OpenID provider (confidential client) and an application, set the redirect URI above, and use `https://<authentik-host>/application/o/<application-slug>/` as the issuer (keep the trailing slash).
+
+When `API_TOKEN` is set, send it as a header on the import endpoint:
+
+```
+Authorization: Bearer <API_TOKEN>
+```
+
+Only `/api/get-url` accepts the token. Everything else requires an OIDC login.
+
 ## Tested AI providers compatibility
 
 - OpenAI
