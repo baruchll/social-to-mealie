@@ -31,6 +31,7 @@ services:
       - AUTH_SECRET=${AUTH_SECRET:-}
       - AUTH_URL=${AUTH_URL:-}
       - AUTH_TRUST_HOST=${AUTH_TRUST_HOST:-true}
+      # Optional: static bearer token so non-browser clients (iOS Shortcut) can call /api/get-url
       - API_TOKEN=${API_TOKEN:-}
       # Optional: per-user Mealie households (needs OIDC and an admin MEALIE_API_KEY)
       - MEALIE_MAP_USERS=${MEALIE_MAP_USERS:-false}
