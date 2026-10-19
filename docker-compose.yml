@@ -21,6 +21,16 @@ services:
       # Optional, addition to the prompt, useful for translation needs remove if not needed
       - EXTRA_PROMPT=${EXTRA_PROMPT:-}
       - COOKIES=${COOKIES:-} #Optional, cookie for yt-dlp requests, useful for protected content
+            # Optional: OIDC login (leave AUTH_OIDC_ISSUER empty to disable auth)
+      - AUTH_OIDC_ISSUER=${AUTH_OIDC_ISSUER:-}
+      - AUTH_OIDC_CLIENT_ID=${AUTH_OIDC_CLIENT_ID:-}
+      - AUTH_OIDC_CLIENT_SECRET=${AUTH_OIDC_CLIENT_SECRET:-}
+      - AUTH_OIDC_NAME=${AUTH_OIDC_NAME:-SSO}
+      - AUTH_SECRET=${AUTH_SECRET:-}
+      - AUTH_URL=${AUTH_URL:-}
+      - AUTH_TRUST_HOST=${AUTH_TRUST_HOST:-true}
+      # Optional: static bearer token so non-browser clients (iOS Shortcut) can call /api/get-url
+      - API_TOKEN=${API_TOKEN:-}
     volumes:
       - ./cookies.txt:/app/cookies.txt # Optional, only needed for some content
     ports:
