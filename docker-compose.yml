@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/gerardpollorebozado/social-to-mealie:latest
+    image: social-to-mealie:multi-household
     container_name: social-to-mealie
     environment:
       - OPENAI_URL=${OPENAI_URL:-https://api.openai.com/v1} #URL of an OPENAI api compatible provider
